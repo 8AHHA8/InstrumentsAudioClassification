@@ -23,7 +23,6 @@ def envelope(y, rate, threshold):
             mask.append(False)
     return mask, y_mean
 
-
 def downsample_mono(path, sr):
     obj = wavio.read(path)
     wav = obj.data.astype(np.float32, order='F')
@@ -78,14 +77,10 @@ def split_wavs(args):
             wav = wav[mask]
             delta_sample = int(dt*rate)
 
-            # cleaned audio is less than a single sample
-            # pad with zeros to delta_sample size
             if wav.shape[0] < delta_sample:
                 sample = np.zeros(shape=(delta_sample,), dtype=np.int16)
                 sample[:wav.shape[0]] = wav
                 save_sample(sample, rate, target_dir, fn, 0)
-            # step through audio and save every delta_sample
-            # discard the ending audio if it is too short
             else:
                 trunc = wav.shape[0] % delta_sample
                 for cnt, i in enumerate(np.arange(0, wav.shape[0]-trunc, delta_sample)):
@@ -132,5 +127,4 @@ if __name__ == '__main__':
                         help='threshold magnitude for np.int16 dtype')
     args, _ = parser.parse_known_args()
 
-    #test_threshold(args)
     split_wavs(args)

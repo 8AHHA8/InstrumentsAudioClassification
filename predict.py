@@ -9,15 +9,14 @@ import os
 import pandas as pd
 from tqdm import tqdm
 
-
-def make_prediction(args):
-
+def make_prediction_sample(args):
     model = load_model(args.model_fn,
-        custom_objects={'STFT':STFT,
-                        'Magnitude':Magnitude,
-                        'ApplyFilterbank':ApplyFilterbank,
-                        'MagnitudeToDecibel':MagnitudeToDecibel})
-    wav_paths = glob('{}/**'.format(args.src_dir), recursive=True)
+        custom_objects={'STFT': STFT,
+                        'Magnitude': Magnitude,
+                        'ApplyFilterbank': ApplyFilterbank,
+                        'MagnitudeToDecibel': MagnitudeToDecibel})
+    
+    wav_paths = glob('audios/**/*.wav', recursive=True)
     wav_paths = sorted([x.replace(os.sep, '/') for x in wav_paths if '.wav' in x])
     classes = sorted(os.listdir(args.src_dir))
     labels = [os.path.split(x)[0].split('/')[-1] for x in wav_paths]
@@ -29,27 +28,27 @@ def make_prediction(args):
         rate, wav = downsample_mono(wav_fn, args.sr)
         mask, env = envelope(wav, rate, threshold=args.threshold)
         clean_wav = wav[mask]
-        step = int(args.sr*args.dt)
+        step = int(args.sr * args.dt)
         batch = []
 
         for i in range(0, clean_wav.shape[0], step):
-            sample = clean_wav[i:i+step]
+            sample = clean_wav[i:i + step]
             sample = sample.reshape(-1, 1)
             if sample.shape[0] < step:
                 tmp = np.zeros(shape=(step, 1), dtype=np.float32)
-                tmp[:sample.shape[0],:] = sample.flatten().reshape(-1, 1)
+                tmp[:sample.shape[0], :] = sample.flatten().reshape(-1, 1)
                 sample = tmp
             batch.append(sample)
+
         X_batch = np.array(batch, dtype=np.float32)
         y_pred = model.predict(X_batch)
         y_mean = np.mean(y_pred, axis=0)
         y_pred = np.argmax(y_mean)
         real_class = os.path.dirname(wav_fn).split('/')[-1]
-        print('Actual class: {}, Predicted class: {}'.format(real_class, classes[y_pred]))
-        results.append(y_mean)
+        results.append((real_class, classes[y_pred]))
 
-    np.save(os.path.join('logs', args.pred_fn), np.array(results))
-
+    np.save(os.path.join('audios', args.pred_fn), np.array(results))
+    return results
 
 if __name__ == '__main__':
 
@@ -69,4 +68,3 @@ if __name__ == '__main__':
     args, _ = parser.parse_known_args()
 
     make_prediction(args)
-
